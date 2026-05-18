@@ -1,0 +1,27 @@
+{
+  "id": "com.toastercloud.provider",
+  "version": "0.1.0",
+  "name": "ToasterCloud",
+  "icon": "./icon_32.png",
+  "sandbox_install_compatible": true,
+  "distribution_type": "public",
+  "stripe_api_access_type": "oauth",
+  "allowed_redirect_uris": [],
+  "permissions": [
+    {
+      "permission": "provisioning_account_request_write",
+      "purpose": "Allows ToasterCloud to create and sign in to your ToasterCloud hosting account."
+    },
+    {
+      "permission": "provisioning_resource_write",
+      "purpose": "Allows ToasterCloud to push hosting instance state changes to Stripe."
+    }
+  ],
+  "provisioning": {
+    "base_url": "https://api.toastercloud.dev/",
+    "oauth_scopes": ["resources:read", "resources:write"],
+    "capabilities": ["resources:deprovision", "resources:update_service"],
+    "deep_link_purposes": ["dashboard"],
+    "llm_context": "https://api.toastercloud.dev/llm-context.txt"
+  }
+}
