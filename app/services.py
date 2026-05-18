@@ -1,10 +1,10 @@
 """ToasterCloud service catalog.
 
 Structure:
-  Plans (parents): single-slot, 2-slot, 4-slot, 8-slot, industrial
-    — regular free/paid services; one active per project at a time
-  Deployable (component): toaster
-    — free under any active plan; references each plan as a parent_service_id
+  Deployable (parent): toaster
+    — the compute instance; provision this first
+  Plans (components): single-slot, 2-slot, 4-slot, 8-slot, industrial
+    — subscription tiers that attach to a toaster; one active at a time
 """
 
 _PLAN_CONSTRAINTS = {
@@ -27,107 +27,18 @@ _NAME_SCHEMA = {
 
 SERVICES: list[dict] = [
     # -------------------------------------------------------------------------
-    # Plans — establish the subscription tier; one active per project at a time
-    # -------------------------------------------------------------------------
-    {
-        "id": "single-slot",
-        "description": (
-            "Single-Slot Plan — 1 dedicated slot (1 vCPU, 256 MB RAM). "
-            "The compact travel toaster. One slot, one job, zero excuses."
-        ),
-        "categories": ["compute"],
-        "group": "plan",
-        "scope": "project",
-        "pricing": {"type": "free"},
-        "allowed_updates": [{"service": "2-slot", "direction": "up"}],
-        "constraints": _PLAN_CONSTRAINTS,
-    },
-    {
-        "id": "2-slot",
-        "description": (
-            "2-Slot Plan — 2 dedicated slots (2 vCPU, 512 MB RAM). "
-            "The classic countertop pop-up."
-        ),
-        "categories": ["compute"],
-        "group": "plan",
-        "scope": "project",
-        "pricing": {
-            "type": "paid",
-            "paid": [{"type": "freeform", "freeform": "$9/month", "is_default": True}],
-        },
-        "allowed_updates": [
-            {"service": "single-slot", "direction": "down"},
-            {"service": "4-slot", "direction": "up"},
-        ],
-        "constraints": _PLAN_CONSTRAINTS,
-    },
-    {
-        "id": "4-slot",
-        "description": (
-            "4-Slot Plan — 4 dedicated slots (4 vCPU, 1 GB RAM). "
-            "The family-size toaster. Load multiple slots in parallel."
-        ),
-        "categories": ["compute"],
-        "group": "plan",
-        "scope": "project",
-        "pricing": {
-            "type": "paid",
-            "paid": [{"type": "freeform", "freeform": "$19/month", "is_default": True}],
-        },
-        "allowed_updates": [
-            {"service": "2-slot", "direction": "down"},
-            {"service": "8-slot", "direction": "up"},
-        ],
-        "constraints": _PLAN_CONSTRAINTS,
-    },
-    {
-        "id": "8-slot",
-        "description": (
-            "8-Slot Plan — 8 dedicated slots (8 vCPU, 2 GB RAM). "
-            "The office workhorse. Eight wide slots for high-throughput teams."
-        ),
-        "categories": ["compute"],
-        "group": "plan",
-        "scope": "project",
-        "pricing": {
-            "type": "paid",
-            "paid": [{"type": "freeform", "freeform": "$39/month", "is_default": True}],
-        },
-        "allowed_updates": [
-            {"service": "4-slot", "direction": "down"},
-            {"service": "industrial", "direction": "up"},
-        ],
-        "constraints": _PLAN_CONSTRAINTS,
-    },
-    {
-        "id": "industrial",
-        "description": (
-            "Industrial Plan — conveyor belt (16 vCPU, 8 GB RAM, NVMe). "
-            "Continuous feed, infinite throughput. Built for the enterprise breakfast rush."
-        ),
-        "categories": ["compute"],
-        "group": "plan",
-        "scope": "project",
-        "pricing": {
-            "type": "paid",
-            "paid": [{"type": "freeform", "freeform": "$79/month", "is_default": True}],
-        },
-        "allowed_updates": [{"service": "8-slot", "direction": "down"}],
-        "constraints": _PLAN_CONSTRAINTS,
-    },
-
-    # -------------------------------------------------------------------------
-    # Deployable — the actual compute instance; free under any active plan
+    # Parent — the compute instance you provision first
     # -------------------------------------------------------------------------
     {
         "id": "toaster",
         "description": (
             "A ToasterCloud compute instance. "
-            "Requires an active plan. Specs are determined by the plan in your project."
+            "Provision this first, then attach a plan to set your hardware tier."
         ),
         "categories": ["compute"],
         "group": "toaster",
         "scope": "project",
+        "pricing": {"type": "free"},
         "configuration_schema": {
             "type": "object",
             "properties": {
@@ -151,18 +62,109 @@ SERVICES: list[dict] = [
             },
             "required": ["region", "name"],
         },
+    },
+
+    # -------------------------------------------------------------------------
+    # Plans — subscription tiers that attach to a toaster; one active at a time
+    # -------------------------------------------------------------------------
+    {
+        "id": "single-slot",
+        "description": (
+            "Single-Slot Plan — 1 dedicated slot (1 vCPU, 256 MB RAM). "
+            "The compact travel toaster. One slot, one job, zero excuses."
+        ),
+        "categories": ["compute"],
+        "group": "plan",
+        "scope": "project",
         "pricing": {
             "type": "component",
             "component": {
-                "options": [
-                    {"parent_service_ids": ["single-slot"], "type": "free"},
-                    {"parent_service_ids": ["2-slot"], "type": "free"},
-                    {"parent_service_ids": ["4-slot"], "type": "free"},
-                    {"parent_service_ids": ["8-slot"], "type": "free"},
-                    {"parent_service_ids": ["industrial"], "type": "free"},
-                ]
+                "options": [{"parent_service_ids": ["toaster"], "type": "free"}],
             },
         },
+        "allowed_updates": [{"service": "2-slot", "direction": "up"}],
+        "constraints": _PLAN_CONSTRAINTS,
+    },
+    {
+        "id": "2-slot",
+        "description": (
+            "2-Slot Plan — 2 dedicated slots (2 vCPU, 512 MB RAM). "
+            "The classic countertop pop-up."
+        ),
+        "categories": ["compute"],
+        "group": "plan",
+        "scope": "project",
+        "pricing": {
+            "type": "component",
+            "component": {
+                "options": [{"parent_service_ids": ["toaster"], "type": "paid", "paid": {"type": "freeform", "freeform": "$9/month"}}],
+            },
+        },
+        "allowed_updates": [
+            {"service": "single-slot", "direction": "down"},
+            {"service": "4-slot", "direction": "up"},
+        ],
+        "constraints": _PLAN_CONSTRAINTS,
+    },
+    {
+        "id": "4-slot",
+        "description": (
+            "4-Slot Plan — 4 dedicated slots (4 vCPU, 1 GB RAM). "
+            "The family-size toaster. Load multiple slots in parallel."
+        ),
+        "categories": ["compute"],
+        "group": "plan",
+        "scope": "project",
+        "pricing": {
+            "type": "component",
+            "component": {
+                "options": [{"parent_service_ids": ["toaster"], "type": "paid", "paid": {"type": "freeform", "freeform": "$19/month"}}],
+            },
+        },
+        "allowed_updates": [
+            {"service": "2-slot", "direction": "down"},
+            {"service": "8-slot", "direction": "up"},
+        ],
+        "constraints": _PLAN_CONSTRAINTS,
+    },
+    {
+        "id": "8-slot",
+        "description": (
+            "8-Slot Plan — 8 dedicated slots (8 vCPU, 2 GB RAM). "
+            "The office workhorse. Eight wide slots for high-throughput teams."
+        ),
+        "categories": ["compute"],
+        "group": "plan",
+        "scope": "project",
+        "pricing": {
+            "type": "component",
+            "component": {
+                "options": [{"parent_service_ids": ["toaster"], "type": "paid", "paid": {"type": "freeform", "freeform": "$39/month"}}],
+            },
+        },
+        "allowed_updates": [
+            {"service": "4-slot", "direction": "down"},
+            {"service": "industrial", "direction": "up"},
+        ],
+        "constraints": _PLAN_CONSTRAINTS,
+    },
+    {
+        "id": "industrial",
+        "description": (
+            "Industrial Plan — conveyor belt (16 vCPU, 8 GB RAM, NVMe). "
+            "Continuous feed, infinite throughput. Built for the enterprise breakfast rush."
+        ),
+        "categories": ["compute"],
+        "group": "plan",
+        "scope": "project",
+        "pricing": {
+            "type": "component",
+            "component": {
+                "options": [{"parent_service_ids": ["toaster"], "type": "paid", "paid": {"type": "freeform", "freeform": "$79/month"}}],
+            },
+        },
+        "allowed_updates": [{"service": "8-slot", "direction": "down"}],
+        "constraints": _PLAN_CONSTRAINTS,
     },
 ]
 
