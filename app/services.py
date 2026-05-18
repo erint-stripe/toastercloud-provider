@@ -1,9 +1,9 @@
-"""ToasterCloud service catalog — all services are free tier."""
+"""ToasterCloud service catalog."""
 
 SERVICES: list[dict] = [
     {
-        "id": "nano",
-        "description": "Nano Toaster — Shared CPU, 128 MB RAM. Perfect for static sites and lightweight APIs.",
+        "id": "pop",
+        "description": "Pop — Shared CPU, 128 MB RAM. Every great idea starts with a little pop. Free forever.",
         "categories": ["compute"],
         "group": "toaster",
         "configuration_schema": {
@@ -25,12 +25,12 @@ SERVICES: list[dict] = [
         },
         "pricing": {"type": "free"},
         "scope": "project",
-        "allowed_updates": [{"service": "micro", "direction": "up"}],
+        "allowed_updates": [{"service": "golden", "direction": "up"}],
         "constraints": {"count": {"at_most": 5}},
     },
     {
-        "id": "micro",
-        "description": "Micro Toaster — 0.5 vCPU, 256 MB RAM. Ideal for development and small apps.",
+        "id": "golden",
+        "description": "Golden — 0.5 vCPU, 256 MB RAM. Golden brown performance for apps that need a little more warmth.",
         "categories": ["compute"],
         "group": "toaster",
         "configuration_schema": {
@@ -50,17 +50,20 @@ SERVICES: list[dict] = [
             },
             "required": ["region", "name"],
         },
-        "pricing": {"type": "free"},
+        "pricing": {
+            "type": "paid",
+            "paid": [{"type": "freeform", "freeform": "$9/month", "is_default": True}],
+        },
         "scope": "project",
         "allowed_updates": [
-            {"service": "nano", "direction": "down"},
-            {"service": "standard", "direction": "up"},
+            {"service": "pop", "direction": "down"},
+            {"service": "well-done", "direction": "up"},
         ],
         "constraints": {"count": {"at_most": 3}},
     },
     {
-        "id": "standard",
-        "description": "Standard Toaster — 1 vCPU, 512 MB RAM. Production-ready compute.",
+        "id": "well-done",
+        "description": "Well Done — 1 vCPU, 512 MB RAM. No pink in the middle. Production-ready compute for serious workloads.",
         "categories": ["compute"],
         "group": "toaster",
         "configuration_schema": {
@@ -85,17 +88,20 @@ SERVICES: list[dict] = [
             },
             "required": ["region", "name"],
         },
-        "pricing": {"type": "free"},
+        "pricing": {
+            "type": "paid",
+            "paid": [{"type": "freeform", "freeform": "$19/month", "is_default": True}],
+        },
         "scope": "project",
         "allowed_updates": [
-            {"service": "micro", "direction": "down"},
-            {"service": "pro", "direction": "up"},
+            {"service": "golden", "direction": "down"},
+            {"service": "artisan", "direction": "up"},
         ],
         "constraints": {"count": {"at_most": 2}},
     },
     {
-        "id": "pro",
-        "description": "Pro Toaster — 2 vCPU, 1 GB RAM. High-performance compute for demanding workloads.",
+        "id": "artisan",
+        "description": "Artisan — 2 vCPU, 1 GB RAM. Slow-toasted to perfection. High-performance compute for demanding applications.",
         "categories": ["compute"],
         "group": "toaster",
         "configuration_schema": {
@@ -120,19 +126,22 @@ SERVICES: list[dict] = [
             },
             "required": ["region", "name"],
         },
-        "pricing": {"type": "free"},
+        "pricing": {
+            "type": "paid",
+            "paid": [{"type": "freeform", "freeform": "$39/month", "is_default": True}],
+        },
         "scope": "project",
         "allowed_updates": [
-            {"service": "standard", "direction": "down"},
-            {"service": "bagel", "direction": "up"},
+            {"service": "well-done", "direction": "down"},
+            {"service": "sourdough", "direction": "up"},
         ],
         "constraints": {"count": {"at_most": 1}},
     },
     {
-        "id": "bagel",
+        "id": "sourdough",
         "description": (
-            "Bagel-Optimized Toaster — 4 vCPU, 2 GB RAM, NVMe-backed storage. "
-            "Maximum throughput for your crunchiest workloads."
+            "Sourdough — 4 vCPU, 2 GB RAM, NVMe-backed storage. "
+            "The long ferment. Maximum throughput. Takes time to appreciate."
         ),
         "categories": ["compute"],
         "group": "toaster",
@@ -165,9 +174,12 @@ SERVICES: list[dict] = [
             },
             "required": ["region", "name"],
         },
-        "pricing": {"type": "free"},
+        "pricing": {
+            "type": "paid",
+            "paid": [{"type": "freeform", "freeform": "$79/month", "is_default": True}],
+        },
         "scope": "project",
-        "allowed_updates": [{"service": "pro", "direction": "down"}],
+        "allowed_updates": [{"service": "artisan", "direction": "down"}],
         "constraints": {"count": {"at_most": 1}},
     },
 ]
