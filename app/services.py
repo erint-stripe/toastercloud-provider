@@ -2,7 +2,7 @@
 
 SERVICES: list[dict] = [
     {
-        "id": "toaster:nano",
+        "id": "nano",
         "description": "Nano Toaster — Shared CPU, 128 MB RAM. Perfect for static sites and lightweight APIs.",
         "categories": ["compute"],
         "group": "toaster",
@@ -25,11 +25,11 @@ SERVICES: list[dict] = [
         },
         "pricing": {"type": "free"},
         "scope": "project",
-        "allowed_updates": [{"service": "toaster:micro", "direction": "up"}],
+        "allowed_updates": [{"service": "micro", "direction": "up"}],
         "constraints": {"count": {"at_most": 5}},
     },
     {
-        "id": "toaster:micro",
+        "id": "micro",
         "description": "Micro Toaster — 0.5 vCPU, 256 MB RAM. Ideal for development and small apps.",
         "categories": ["compute"],
         "group": "toaster",
@@ -53,13 +53,13 @@ SERVICES: list[dict] = [
         "pricing": {"type": "free"},
         "scope": "project",
         "allowed_updates": [
-            {"service": "toaster:nano", "direction": "down"},
-            {"service": "toaster:standard", "direction": "up"},
+            {"service": "nano", "direction": "down"},
+            {"service": "standard", "direction": "up"},
         ],
         "constraints": {"count": {"at_most": 3}},
     },
     {
-        "id": "toaster:standard",
+        "id": "standard",
         "description": "Standard Toaster — 1 vCPU, 512 MB RAM. Production-ready compute.",
         "categories": ["compute"],
         "group": "toaster",
@@ -88,13 +88,13 @@ SERVICES: list[dict] = [
         "pricing": {"type": "free"},
         "scope": "project",
         "allowed_updates": [
-            {"service": "toaster:micro", "direction": "down"},
-            {"service": "toaster:pro", "direction": "up"},
+            {"service": "micro", "direction": "down"},
+            {"service": "pro", "direction": "up"},
         ],
         "constraints": {"count": {"at_most": 2}},
     },
     {
-        "id": "toaster:pro",
+        "id": "pro",
         "description": "Pro Toaster — 2 vCPU, 1 GB RAM. High-performance compute for demanding workloads.",
         "categories": ["compute"],
         "group": "toaster",
@@ -123,13 +123,13 @@ SERVICES: list[dict] = [
         "pricing": {"type": "free"},
         "scope": "project",
         "allowed_updates": [
-            {"service": "toaster:standard", "direction": "down"},
-            {"service": "toaster:bagel", "direction": "up"},
+            {"service": "standard", "direction": "down"},
+            {"service": "bagel", "direction": "up"},
         ],
         "constraints": {"count": {"at_most": 1}},
     },
     {
-        "id": "toaster:bagel",
+        "id": "bagel",
         "description": (
             "Bagel-Optimized Toaster — 4 vCPU, 2 GB RAM, NVMe-backed storage. "
             "Maximum throughput for your crunchiest workloads."
@@ -167,7 +167,7 @@ SERVICES: list[dict] = [
         },
         "pricing": {"type": "free"},
         "scope": "project",
-        "allowed_updates": [{"service": "toaster:pro", "direction": "down"}],
+        "allowed_updates": [{"service": "pro", "direction": "down"}],
         "constraints": {"count": {"at_most": 1}},
     },
 ]
