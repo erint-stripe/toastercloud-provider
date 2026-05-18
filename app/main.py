@@ -25,7 +25,7 @@ from .models import (
     ServicesResponse,
     UpdateServiceBody,
 )
-from .services import SERVICES, SERVICES_BY_ID
+from .services import PLAN_IDS, SERVICES, SERVICES_BY_ID
 from .storage import (
     Account,
     Resource,
@@ -253,7 +253,9 @@ async def provision_resource(
         project_id=body.project_id,
         environment=body.environment or "prod",
     )
-    r.access_configuration = _access_config(r)
+    # Plans are subscription records — no compute to connect to
+    if body.service_id not in PLAN_IDS:
+        r.access_configuration = _access_config(r)
     create_resource(r, idempotency_key=idempotency_key)
 
     return ResourceResponse(
