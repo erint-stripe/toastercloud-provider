@@ -3,7 +3,7 @@
 import secrets
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 
@@ -44,6 +44,7 @@ _accounts_by_token: dict[str, Account] = {}
 _accounts_by_email: dict[str, Account] = {}
 _resources: dict[str, Resource] = {}
 _idempotency: dict[str, str] = {}  # key -> resource_id
+_dashboard_tokens: dict[str, tuple[str, datetime]] = {}  # token -> (acct_id, expires_at)
 
 
 # --- Accounts ---
@@ -124,3 +125,38 @@ def update_resource(resource_id: str, **kwargs: Any) -> Optional[Resource]:
             for k, v in kwargs.items():
                 setattr(r, k, v)
         return r
+
+
+# --- Dashboard tokens ---
+
+def create_dashboard_token(acct_id: str, ttl_seconds: int = 300) -> str:
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)
+    with _lock:
+        _dashboard_tokens[token] = (acct_id, expires_at)
+    return token
+
+
+def consume_dashboard_token(token: str) -> Optional[str]:
+    """Return acct_id if token is valid and unexpired, then delete it."""
+    with _lock:
+        entry = _dashboard_tokens.pop(token, None)
+    if not entry:
+        return None
+    acct_id, expires_at = entry
+    if datetime.now(timezone.utc) > expires_at:
+        return None
+    return acct_id
+
+
+def get_resources_for_account(acct_id: str) -> list[Resource]:
+    with _lock:
+        return [r for r in _resources.values() if r.account_id == acct_id and r.status != "removed"]
+
+
+def get_account_by_id(acct_id: str) -> Optional[Account]:
+    with _lock:
+        for acct in _accounts_by_email.values():
+            if acct.id == acct_id:
+                return acct
+        return None

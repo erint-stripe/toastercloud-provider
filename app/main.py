@@ -30,9 +30,13 @@ from .storage import (
     Account,
     Resource,
     check_idempotency,
+    consume_dashboard_token,
+    create_dashboard_token,
     create_resource,
+    get_account_by_id,
     get_account_by_token,
     get_resource,
+    get_resources_for_account,
     refresh_account_token,
     update_resource,
     upsert_account,
@@ -76,7 +80,7 @@ def _access_config(resource: Resource) -> dict:
         "ssh_username": "deploy",
         "deploy_key": f"tc_key_{secrets.token_urlsafe(24)}",
         "api_endpoint": f"https://{name}-{resource.id}.{region}.toastercloud.dev",
-        "dashboard_url": f"https://app.toastercloud.dev/instances/{resource.id}",
+        "dashboard_url": f"{config.PROVIDER_BASE_URL}/dashboard",
         "region": region,
         "service": resource.service_id,
     }
@@ -474,14 +478,112 @@ async def deep_links(
     token = verify_provider_token(authorization)
     acct = _require_account(token)
 
-    one_time_token = secrets.token_urlsafe(32)
-    url = f"https://app.toastercloud.dev/dashboard?t={one_time_token}&acct={acct.id}"
+    token = create_dashboard_token(acct.id, ttl_seconds=300)
+    url = f"{config.PROVIDER_BASE_URL}/dashboard?t={token}"
 
     return DeepLinkResponse(
         purpose=body.purpose,
         url=url,
         expires_at=_now_plus(300),  # 5-minute single-use link
     )
+
+
+# ---------------------------------------------------------------------------
+# Dashboard (deep-link destination — one-time token, 5-minute expiry)
+# ---------------------------------------------------------------------------
+
+@app.get("/dashboard", response_class=Response)
+async def dashboard(t: Optional[str] = Query(None)):
+    if not t:
+        return Response(content="<h1>Missing token</h1>", media_type="text/html", status_code=400)
+
+    acct_id = consume_dashboard_token(t)
+    if not acct_id:
+        return Response(
+            content="<h1>Link expired or invalid</h1><p>Deep links are single-use and expire after 5 minutes. Return to your Stripe project and click the dashboard link again.</p>",
+            media_type="text/html",
+            status_code=401,
+        )
+
+    acct = get_account_by_id(acct_id)
+    resources = get_resources_for_account(acct_id)
+
+    plans = [r for r in resources if r.service_id in PLAN_IDS]
+    instances = [r for r in resources if r.service_id not in PLAN_IDS]
+
+    def _plan_badge(svc_id: str) -> str:
+        colors = {"single-slot": "#6c757d", "2-slot": "#0d6efd", "4-slot": "#198754", "8-slot": "#fd7e14", "industrial": "#dc3545"}
+        return f'<span style="background:{colors.get(svc_id,"#333")};color:#fff;padding:2px 8px;border-radius:4px;font-size:13px">{svc_id}</span>'
+
+    plan_rows = "".join(
+        f"<tr><td>{_plan_badge(r.service_id)}</td><td>{r.environment}</td><td>{r.created_at.strftime('%Y-%m-%d %H:%M UTC')}</td></tr>"
+        for r in plans
+    ) or "<tr><td colspan='3' style='color:#888'>No active plan</td></tr>"
+
+    def _instance_rows() -> str:
+        rows = []
+        for r in instances:
+            ac = r.access_configuration or {}
+            rows.append(f"""
+            <tr>
+              <td><code>{r.id}</code></td>
+              <td>{r.service_id}</td>
+              <td>{ac.get('host','—')}</td>
+              <td><code>{ac.get('deploy_key','—')[:20]}…</code></td>
+              <td>{r.environment}</td>
+            </tr>""")
+        return "".join(rows) or "<tr><td colspan='5' style='color:#888'>No instances</td></tr>"
+
+    acct_name = (acct.name or acct.email) if acct else acct_id
+
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ToasterCloud Dashboard</title>
+  <style>
+    body{{font-family:system-ui,sans-serif;margin:0;background:#fafafa;color:#111}}
+    header{{background:#1a1a1a;color:#fff;padding:16px 32px;display:flex;align-items:center;gap:12px}}
+    header h1{{margin:0;font-size:20px}}
+    .badge{{background:#f59e0b;color:#000;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700}}
+    main{{max-width:960px;margin:32px auto;padding:0 24px}}
+    section{{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin-bottom:24px}}
+    h2{{margin:0 0 16px;font-size:16px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}}
+    table{{width:100%;border-collapse:collapse;font-size:14px}}
+    th{{text-align:left;padding:8px 12px;background:#f3f4f6;border-bottom:1px solid #e5e7eb}}
+    td{{padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:top}}
+    code{{background:#f3f4f6;padding:2px 5px;border-radius:3px;font-size:12px}}
+    .acct{{font-size:14px;color:#9ca3af}}
+  </style>
+</head>
+<body>
+  <header>
+    <span style="font-size:28px">🍞</span>
+    <h1>ToasterCloud</h1>
+    <span class="badge">Dashboard</span>
+    <span class="acct" style="margin-left:auto">{acct_name}</span>
+  </header>
+  <main>
+    <section>
+      <h2>Active Plans</h2>
+      <table>
+        <thead><tr><th>Plan</th><th>Environment</th><th>Created</th></tr></thead>
+        <tbody>{plan_rows}</tbody>
+      </table>
+    </section>
+    <section>
+      <h2>Toaster Instances</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Service</th><th>Host</th><th>Deploy Key</th><th>Env</th></tr></thead>
+        <tbody>{_instance_rows()}</tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>"""
+
+    return Response(content=html, media_type="text/html")
 
 
 # ---------------------------------------------------------------------------
